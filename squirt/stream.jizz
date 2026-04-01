@@ -1,0 +1,36 @@
+# squirt stream contracts for emitted artifacts.
+
+js: export const STREAM_KIND = "artifact-stream";
+
+```javascript artifact_names
+export const artifactNames = [
+    "main.js",
+    "main.go",
+    "main.rs",
+    "main.zig",
+    "plan.json",
+];
+```
+
+```go emission_record
+package squirt
+
+type EmissionRecord struct {
+    Lane string
+    Path string
+}
+```
+
+```rust lane_presence
+pub fn should_emit_lane(present: bool) -> bool {
+    present
+}
+```
+
+```zig manifest_flush
+const std = @import("std");
+
+pub fn manifestFlushRequired() bool {
+    return true;
+}
+```

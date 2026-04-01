@@ -1,0 +1,16 @@
+{
+  "name": "jizzrug",
+  "version": "0.1.0",
+  "description": "A bootstrap host runtime for the jizzrug polyglot systems language.",
+  "license": "AGPL-3.0-only",
+  "type": "module",
+  "bin": {
+    "rizz": "./bin/rizz.js"
+  },
+  "scripts": {
+    "test": "node --test"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

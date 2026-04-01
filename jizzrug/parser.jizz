@@ -1,0 +1,45 @@
+# Parser stage for jizzrug.
+# Serious boundary model: explicit segments, language-native lanes.
+
+js: export const PARSER_STAGE = "parse";
+
+```javascript grammar
+export const grammar = {
+    line: "<lane>: <code>",
+    fenceOpen: "```<lane> [label]",
+    fenceClose: "```",
+};
+```
+
+```rust validation
+pub fn reject_unknown_lane(lane: &str) -> bool {
+    !matches!(lane, "js" | "javascript" | "go" | "golang" | "rust" | "rs" | "zig")
+}
+```
+
+```go parser_contract
+package parser
+
+type ParserContract struct {
+    IgnoresBlankLines bool
+    IgnoresComments   bool
+    SupportsBlocks    bool
+}
+
+func DefaultContract() ParserContract {
+    return ParserContract{
+        IgnoresBlankLines: true,
+        IgnoresComments:   true,
+        SupportsBlocks:    true,
+    }
+}
+```
+
+```zig block_state
+const std = @import("std");
+
+pub const BlockState = enum {
+    idle,
+    inside_segment,
+};
+```

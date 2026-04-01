@@ -1,0 +1,42 @@
+# Lane emission for jizzrug.
+
+js: export const TRANSPILER_STAGE = "dispatch-and-emit";
+
+```javascript extension_map
+export const extensionMap = {
+    javascript: "js",
+    go: "go",
+    rust: "rs",
+    zig: "zig",
+};
+```
+
+```rust output_naming
+pub fn output_name(lane: &str) -> &'static str {
+    match lane {
+        "javascript" => "main.js",
+        "go" => "main.go",
+        "rust" => "main.rs",
+        "zig" => "main.zig",
+        _ => "unknown.out",
+    }
+}
+```
+
+```go compiler_target
+package transpiler
+
+type CompilerTarget struct {
+    Lane       string
+    OutputName string
+}
+```
+
+```zig emission_policy
+const std = @import("std");
+
+pub const EmissionPolicy = struct {
+    write_only_present_lanes: bool = true,
+    preserve_segment_order: bool = true,
+};
+```

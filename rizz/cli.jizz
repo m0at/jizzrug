@@ -1,0 +1,43 @@
+# rizz command surface, written in jizzrug.
+
+js: export const COMMAND_NAME = "cum";
+js: export const COMMAND_EXPANSION = "Computer Unified Memory dispatcher";
+js: export const DEFAULT_OUTPUT_DIR = "dist/jizzrug";
+
+```javascript synopsis
+export function usage() {
+    return "rizz cum <source.jizz> [--out DIR] [--json]";
+}
+```
+
+```go accepted_source
+package main
+
+func acceptedSourceExtensions() []string {
+    return []string{".jizz", ".jizzrug", ".jr"}
+}
+```
+
+```rust command_contract
+pub struct CommandContract {
+    pub writes_plan_json: bool,
+    pub prints_json_when_requested: bool,
+    pub requires_source_path: bool,
+}
+
+pub fn default_contract() -> CommandContract {
+    CommandContract {
+        writes_plan_json: true,
+        prints_json_when_requested: true,
+        requires_source_path: true,
+    }
+}
+```
+
+```zig dispatcher
+const std = @import("std");
+
+pub fn engage() void {
+    std.debug.print("Computer Unified Memory dispatcher engaged\\n", .{});
+}
+```

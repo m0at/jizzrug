@@ -1,0 +1,29 @@
+# Bootstrap plan for a self-hosting jizzrug compiler.
+
+js: export const BOOTSTRAP_TARGET = "self-hosting-front-end";
+
+```javascript phases
+export const phases = [
+    "parse source segments",
+    "normalize lane aliases",
+    "build manifest graph",
+    "emit language-native outputs",
+];
+```
+
+```rust bootstrap_status
+pub enum BootstrapStatus {
+    SourceOfTruthOnly,
+    HostCompilerExists,
+    SelfHosting,
+}
+```
+
+```go milestone
+package bootstrap
+
+type Milestone struct {
+    Name   string
+    Result string
+}
+```

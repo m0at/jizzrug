@@ -1,0 +1,37 @@
+# Canonical source model for the jizzrug compiler.
+
+js: export const CANONICAL_EXTENSION = ".jizz";
+js: export const ACCEPTED_EXTENSIONS = [".jizz", ".jizzrug", ".jr"];
+
+```rust segment
+pub struct Segment {
+    pub id: usize,
+    pub lane: &'static str,
+    pub kind: &'static str,
+    pub label: Option<&'static str>,
+    pub source_line: usize,
+}
+```
+
+```go manifestEntry
+package source_model
+
+type ManifestEntry struct {
+    ID         int
+    Lane       string
+    Kind       string
+    Label      string
+    SourceLine int
+}
+```
+
+```zig laneSet
+const std = @import("std");
+
+pub const LaneSet = [_][]const u8{
+    "javascript",
+    "go",
+    "rust",
+    "zig",
+};
+```

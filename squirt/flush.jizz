@@ -1,0 +1,49 @@
+# squirt is the output flush layer for jizzrug.
+# It owns the final write phase after the dispatcher has assigned lanes.
+
+js: export const SQUIRT_STAGE = "flush";
+js: export const DEFAULT_PLAN_NAME = "plan.json";
+
+```javascript responsibilities
+export const responsibilities = [
+    "write emitted lane files",
+    "write plan manifest",
+    "preserve lane order metadata",
+    "avoid writing lanes that are not present",
+];
+```
+
+```go writer_policy
+package squirt
+
+type WriterPolicy struct {
+    WritesManifest     bool
+    WritesPresentLanes bool
+    OverwritesOutputs  bool
+}
+
+func DefaultWriterPolicy() WriterPolicy {
+    return WriterPolicy{
+        WritesManifest:     true,
+        WritesPresentLanes: true,
+        OverwritesOutputs:  true,
+    }
+}
+```
+
+```rust flush_contract
+pub struct FlushContract {
+    pub output_dir_required: bool,
+    pub writes_plan_json: bool,
+    pub stable_output_names: bool,
+}
+```
+
+```zig sink
+const std = @import("std");
+
+pub const Sink = struct {
+    output_dir_required: bool = true,
+    stable_output_names: bool = true,
+};
+```

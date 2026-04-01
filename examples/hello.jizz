@@ -1,0 +1,29 @@
+# Canonical hello-world program in jizzrug.
+
+js: console.log("hello from JavaScript");
+
+```rust greet
+fn greet(name: &str) -> String {
+    format!("hello, {name}, from Rust")
+}
+```
+
+```go main
+package main
+
+import "fmt"
+
+func main() {
+    fmt.Println("hello from Go")
+}
+```
+
+```zig main
+const std = @import("std");
+
+pub fn main() !void {
+    std.debug.print("hello from Zig\n", .{});
+}
+```
+
+js: console.log("polyglot lane switch complete");
