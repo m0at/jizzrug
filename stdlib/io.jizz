@@ -1,0 +1,113 @@
+# I/O contracts for jizzrug.
+# Cross-lane print, read, and file operations.
+
+```javascript io_ops
+export function print(...args) {
+  process.stdout.write(args.join(" ") + "\n");
+}
+
+export function eprint(...args) {
+  process.stderr.write(args.join(" ") + "\n");
+}
+
+export function readFileSync(path) {
+  const fs = require("fs");
+  return fs.readFileSync(path, "utf8");
+}
+
+export function writeFileSync(path, content) {
+  const fs = require("fs");
+  fs.writeFileSync(path, content, "utf8");
+}
+```
+
+```rust io_ops
+use std::io::{self, Write, BufRead};
+use std::fs;
+
+pub fn print(msg: &str) {
+    println!("{}", msg);
+}
+
+pub fn eprint(msg: &str) {
+    eprintln!("{}", msg);
+}
+
+pub fn read_file(path: &str) -> Result<String, io::Error> {
+    fs::read_to_string(path)
+}
+
+pub fn write_file(path: &str, content: &str) -> Result<(), io::Error> {
+    fs::write(path, content)
+}
+
+pub fn read_line() -> Result<String, io::Error> {
+    let stdin = io::stdin();
+    let mut line = String::new();
+    stdin.lock().read_line(&mut line)?;
+    Ok(line.trim_end().to_string())
+}
+```
+
+```go io_ops
+package io
+
+import (
+	"bufio"
+	"fmt"
+	"os"
+)
+
+func Print(args ...interface{}) {
+	fmt.Println(args...)
+}
+
+func Eprint(args ...interface{}) {
+	fmt.Fprintln(os.Stderr, args...)
+}
+
+func ReadFile(path string) (string, error) {
+	data, err := os.ReadFile(path)
+	return string(data), err
+}
+
+func WriteFile(path string, content string) error {
+	return os.WriteFile(path, []byte(content), 0644)
+}
+
+func ReadLine() (string, error) {
+	scanner := bufio.NewScanner(os.Stdin)
+	if scanner.Scan() {
+		return scanner.Text(), nil
+	}
+	return "", scanner.Err()
+}
+```
+
+```zig io_ops
+const std = @import("std");
+
+pub fn print(msg: []const u8) void {
+    const stdout = std.io.getStdOut().writer();
+    stdout.writeAll(msg) catch {};
+    stdout.writeAll("\n") catch {};
+}
+
+pub fn eprint(msg: []const u8) void {
+    const stderr = std.io.getStdErr().writer();
+    stderr.writeAll(msg) catch {};
+    stderr.writeAll("\n") catch {};
+}
+
+pub fn readFile(allocator: std.mem.Allocator, path: []const u8) ![]u8 {
+    const file = try std.fs.cwd().openFile(path, .{});
+    defer file.close();
+    return try file.readToEndAlloc(allocator, std.math.maxInt(usize));
+}
+
+pub fn writeFile(path: []const u8, content: []const u8) !void {
+    const file = try std.fs.cwd().createFile(path, .{});
+    defer file.close();
+    try file.writeAll(content);
+}
+```

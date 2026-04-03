@@ -1,0 +1,56 @@
+# Module system model for jizzrug.
+# Defines import resolution, dependency graphs, and stdlib loading.
+
+```javascript module_system
+export const MODULE_SYSTEM_VERSION = "0.1.0";
+
+export const STDLIB_PREFIX = "stdlib/";
+
+export const STDLIB_MODULES = [
+  "stdlib/io.jizz",
+  "stdlib/fmt.jizz",
+  "stdlib/math.jizz",
+  "stdlib/collections.jizz",
+];
+
+export function isStdlibImport(specifier) {
+  return specifier.startsWith(STDLIB_PREFIX);
+}
+```
+
+```rust module_node
+pub struct ModuleNode {
+    pub path: String,
+    pub imports: Vec<String>,
+}
+
+pub fn is_stdlib(specifier: &str) -> bool {
+    specifier.starts_with("stdlib/")
+}
+```
+
+```go module_graph
+package modules
+
+type ModuleNode struct {
+    Path    string
+    Imports []string
+}
+
+func IsStdlib(specifier string) bool {
+    return len(specifier) > 7 && specifier[:7] == "stdlib/"
+}
+```
+
+```zig module_types
+const std = @import("std");
+
+pub const ModuleNode = struct {
+    path: []const u8,
+    imports: []const []const u8,
+};
+
+pub fn isStdlib(specifier: []const u8) bool {
+    return specifier.len >= 7 and std.mem.eql(u8, specifier[0..7], "stdlib/");
+}
+```

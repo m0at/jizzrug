@@ -1,90 +1,134 @@
 # Parser stage for jizzrug.
-# Serious boundary model: explicit segments, language-native lanes.
+# Boundary model: explicit segments, language-native lanes, directives.
 
 js: export const PARSER_STAGE = "parse";
 
 ```javascript grammar
 export const grammar = {
-    line: "<lane>: <code>",
-    fenceOpen: "```<lane> [label]",
+    line: "<lane>[,<lane>]: <code>",
+    fenceOpen: "```<lane>[,<lane>] [label]",
     fenceClose: "```",
+    importDirective: '@import "path"',
+    metaDirective: "@meta key value",
+    refDirective: "@ref label",
 };
 export const parserContract = {
     ignoresBlankLines: true,
     ignoresComments: true,
     supportsBlocks: true,
+    supportsImports: true,
+    supportsMeta: true,
+    supportsRefs: true,
+    supportsMultiLane: true,
+    supportsColumnTracking: true,
+    supportsErrorRecovery: true,
 };
 
-export function parseProgram(source, sourceModel, ParseErrorCtor = Error) {
+export function parseProgram(source, sourceModel, ParseErrorCtor = Error, opts = {}) {
+    const aliases = sourceModel?.LANGUAGE_ALIASES ?? {};
+    const recover = opts.recover ?? false;
     const lines = source.split(/\r?\n/);
     const segments = [];
+    const imports = [];
+    const meta = {};
+    const refs = new Set();
+    const errors = recover ? [] : null;
     let index = 0;
     let nextId = 1;
 
-    function canonicalLane(rawLane) {
-        const canonical = sourceModel.LANGUAGE_ALIASES?.[rawLane.trim().toLowerCase()];
+    function loc(line, col) { return { line, column: col }; }
+
+    function canonicalLane(rawLane, line, col) {
+        const canonical = aliases[rawLane.trim().toLowerCase()];
         if (!canonical) {
-            throw new ParseErrorCtor(`Unsupported lane '${rawLane}'.`);
+            const err = new ParseErrorCtor(`Unsupported lane '${rawLane}'.`);
+            err.loc = loc(line, col);
+            if (errors) { errors.push(err); return null; }
+            throw err;
         }
         return canonical;
+    }
+
+    function pushError(msg, line, col) {
+        const err = new ParseErrorCtor(msg);
+        err.loc = loc(line, col);
+        if (errors) { errors.push(err); return; }
+        throw err;
     }
 
     while (index < lines.length) {
         const rawLine = lines[index];
         const stripped = rawLine.trim();
+        const lineNum = index + 1;
 
-        if (!stripped || stripped.startsWith("#")) {
-            index += 1;
-            continue;
+        if (!stripped || stripped.startsWith("#")) { index += 1; continue; }
+
+        if (stripped.startsWith("@import ")) {
+            const m = stripped.match(/^@import\s+"([^"]+)"\s*$/);
+            if (!m) { pushError(`Malformed @import on line ${lineNum}.`, lineNum, 1); index += 1; continue; }
+            imports.push({ path: m[1], line: lineNum, column: 1 });
+            index += 1; continue;
         }
 
-        const fenceMatch = stripped.match(/^```([A-Za-z0-9_+-]+)(?:\s+(.*))?$/);
+        if (stripped === "@meta" || stripped.startsWith("@meta ")) {
+            const m = stripped.match(/^@meta\s+(\S+)\s+(.+)$/);
+            if (!m) { pushError(`Malformed @meta on line ${lineNum}.`, lineNum, 1); index += 1; continue; }
+            meta[m[1]] = m[2];
+            index += 1; continue;
+        }
+
+        if (stripped === "@ref" || stripped.startsWith("@ref ")) {
+            const m = stripped.match(/^@ref\s+(\S+)\s*$/);
+            if (!m) { pushError(`Malformed @ref on line ${lineNum}.`, lineNum, 1); index += 1; continue; }
+            refs.add(m[1]);
+            index += 1; continue;
+        }
+
+        const fenceMatch = stripped.match(/^```([A-Za-z0-9_+\-,]+)(?:\s+(.*))?$/);
         if (fenceMatch) {
-            const lane = canonicalLane(fenceMatch[1]);
+            const rawLanes = fenceMatch[1];
             const label = fenceMatch[2] ? fenceMatch[2].trim() : null;
             const blockStart = index + 1;
             index += 1;
             const blockLines = [];
-            while (index < lines.length && lines[index].trim() !== "```") {
-                blockLines.push(lines[index]);
-                index += 1;
+            while (index < lines.length && lines[index].trim() !== "```") { blockLines.push(lines[index]); index += 1; }
+            if (index >= lines.length) { pushError(`Unterminated fenced block starting on line ${blockStart}.`, blockStart, 1); break; }
+            const blockSource = blockLines.join("\n").replace(/\s+$/, "");
+            for (const rawLane of rawLanes.split(",")) {
+                const lane = canonicalLane(rawLane, lineNum, 1);
+                if (!lane) continue;
+                segments.push({ id: nextId, language: lane, kind: "block", label, lineStart: blockStart, columnStart: 1, source: blockSource });
+                nextId += 1;
             }
-            if (index >= lines.length) {
-                throw new ParseErrorCtor(`Unterminated fenced block starting on line ${blockStart}.`);
-            }
-            segments.push({
-                id: nextId,
-                language: lane,
-                kind: "block",
-                label,
-                lineStart: blockStart,
-                source: blockLines.join("\n").replace(/\s+$/, ""),
-            });
-            nextId += 1;
-            index += 1;
-            continue;
+            index += 1; continue;
         }
 
         const colonIndex = rawLine.indexOf(":");
         if (colonIndex !== -1) {
-            const lane = canonicalLane(rawLine.slice(0, colonIndex));
-            segments.push({
-                id: nextId,
-                language: lane,
-                kind: "line",
-                label: null,
-                lineStart: index + 1,
-                source: rawLine.slice(colonIndex + 1).trimStart(),
-            });
-            nextId += 1;
-            index += 1;
-            continue;
+            const lanesPart = rawLine.slice(0, colonIndex);
+            const afterColon = rawLine.slice(colonIndex + 1);
+            const trimmed = afterColon.trimStart();
+            const colStart = colonIndex + 1 + (afterColon.length - trimmed.length) + 1;
+            let anyValid = false;
+            let anyAttempted = false;
+            for (const rawLane of lanesPart.split(",")) {
+                anyAttempted = true;
+                const lane = canonicalLane(rawLane, lineNum, 1);
+                if (!lane) continue;
+                anyValid = true;
+                segments.push({ id: nextId, language: lane, kind: "line", label: null, lineStart: lineNum, columnStart: colStart, source: trimmed });
+                nextId += 1;
+            }
+            if (anyValid || anyAttempted) { index += 1; continue; }
         }
 
-        throw new ParseErrorCtor(`Could not parse line ${index + 1}: '${rawLine}'.`);
+        pushError(`Could not parse line ${lineNum}: '${rawLine}'.`, lineNum, 1);
+        index += 1;
     }
 
-    return { segments };
+    const result = { segments, imports, meta, refs: [...refs] };
+    if (errors) result.errors = errors;
+    return result;
 }
 ```
 

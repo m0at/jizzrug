@@ -3,11 +3,16 @@ import fsSync from "node:fs";
 import path from "node:path";
 import vm from "node:vm";
 import { fileURLToPath } from "node:url";
+import { typecheck } from "./typechecker.js";
+import { ParseError, parseProgram as parserParseProgram } from "./parser.js";
+import { watchDir } from "./watcher.js";
+import { startRepl } from "./repl.js";
+import { formatSource } from "./fmt.js";
 
 let runtimeSpecPromise = null;
 let runtimeSpecSync = null;
 
-export class ParseError extends Error {}
+export { ParseError };
 
 function toPlainData(value) {
   return JSON.parse(JSON.stringify(value));
@@ -122,68 +127,7 @@ export async function parseProgramWithSpec(source, treeRoot = repoRoot()) {
 function bootstrapParseProgram(source, sourceModel = { LANGUAGE_ALIASES: {
   js: "javascript", javascript: "javascript", node: "javascript", go: "go", golang: "go", rust: "rust", rs: "rust", zig: "zig",
 } }) {
-  const lines = source.split(/\r?\n/);
-  const segments = [];
-  let index = 0;
-  let nextId = 1;
-
-  while (index < lines.length) {
-    const rawLine = lines[index];
-    const stripped = rawLine.trim();
-
-    if (!stripped || stripped.startsWith("#")) {
-      index += 1;
-      continue;
-    }
-
-    const fenceMatch = stripped.match(/^```([A-Za-z0-9_+-]+)(?:\s+(.*))?$/);
-    if (fenceMatch) {
-      const lane = canonicalLaneFromSpec(fenceMatch[1], sourceModel);
-      const label = fenceMatch[2] ? fenceMatch[2].trim() : null;
-      const blockStart = index + 1;
-      index += 1;
-      const blockLines = [];
-      while (index < lines.length && lines[index].trim() !== "```") {
-        blockLines.push(lines[index]);
-        index += 1;
-      }
-      if (index >= lines.length) {
-        throw new ParseError(`Unterminated fenced block starting on line ${blockStart}.`);
-      }
-      segments.push({
-        id: nextId,
-        language: lane,
-        kind: "block",
-        label,
-        lineStart: blockStart,
-        source: blockLines.join("\n").replace(/\s+$/, ""),
-      });
-      nextId += 1;
-      index += 1;
-      continue;
-    }
-
-    const colonIndex = rawLine.indexOf(":");
-    if (colonIndex !== -1) {
-      const lane = canonicalLaneFromSpec(rawLine.slice(0, colonIndex), sourceModel);
-      const sourceText = rawLine.slice(colonIndex + 1).trimStart();
-      segments.push({
-        id: nextId,
-        language: lane,
-        kind: "line",
-        label: null,
-        lineStart: index + 1,
-        source: sourceText,
-      });
-      nextId += 1;
-      index += 1;
-      continue;
-    }
-
-    throw new ParseError(`Could not parse line ${index + 1}: '${rawLine}'.`);
-  }
-
-  return { segments };
+  return parserParseProgram(source, sourceModel, ParseError);
 }
 
 export function parseProgram(source) {
@@ -302,6 +246,9 @@ async function printHelp(treeRoot = repoRoot()) {
 function parseFlags(args) {
   let outDir = null;
   let json = false;
+  let check = false;
+  let verbose = false;
+  let dryRun = false;
   const positional = [];
 
   for (let index = 0; index < args.length; index += 1) {
@@ -310,26 +257,50 @@ function parseFlags(args) {
       json = true;
       continue;
     }
+    if (arg === "--check") {
+      check = true;
+      continue;
+    }
     if (arg === "--out") {
       outDir = args[index + 1];
       index += 1;
       continue;
     }
+    if (arg === "--verbose") {
+      verbose = true;
+      continue;
+    }
+    if (arg === "--dry-run") {
+      dryRun = true;
+      continue;
+    }
     positional.push(arg);
   }
 
-  return { outDir, json, positional };
+  return { outDir, json, check, verbose, dryRun, positional };
 }
 
 async function runCum(args) {
   const spec = await loadRuntimeSpec();
-  const { outDir, json, positional } = parseFlags(args);
+  const { outDir, json, check, positional } = parseFlags(args);
   const source = positional[0];
   if (!source) {
     throw new Error("cum requires a source path.");
   }
   if (!spec.sourceModel.ACCEPTED_EXTENSIONS.some((ext) => source.endsWith(ext))) {
     throw new Error("source must end in .jizz, .jizzrug, or .jr");
+  }
+  if (check) {
+    const sourceText = await fs.readFile(source, "utf8");
+    const program = toPlainData(spec.parser.parseProgram(sourceText, spec.sourceModel, ParseError));
+    const result = typecheck(program);
+    if (!result.valid) {
+      for (const err of result.errors) {
+        const loc = err.line ? `:${err.line}` : "";
+        console.error(`${source}${loc}: ${err.message}`);
+      }
+      throw new Error("Typecheck failed.");
+    }
   }
   const manifest = await compileSource(source, outDir ?? spec.cli.COMMANDS.cum.defaultOutDir);
   if (json) {
@@ -351,6 +322,79 @@ async function runBootstrap(args) {
   }
 }
 
+async function runWatch(args) {
+  const spec = await loadRuntimeSpec();
+  const { outDir, verbose } = parseFlags(args);
+  const out = outDir ?? spec.cli.COMMANDS.watch.defaultOutDir;
+  const roots = spec.bootstrap.SOURCE_ROOTS.map((r) => path.join(repoRoot(), r));
+  console.log(`Watching ${roots.join(", ")} for changes...`);
+  watchDir(roots, spec.sourceModel.ACCEPTED_EXTENSIONS, async (_event, filePath) => {
+    if (verbose) console.log(`Change detected: ${filePath}`);
+    try {
+      const unitDir = path.join(out, path.basename(filePath, path.extname(filePath)));
+      await compileSource(filePath, unitDir);
+      console.log(`Recompiled ${filePath}`);
+    } catch (err) {
+      console.error(`Error compiling ${filePath}: ${err.message}`);
+    }
+  });
+  await new Promise(() => {});
+}
+
+async function runRepl() {
+  startRepl(parseProgram);
+  await new Promise(() => {});
+}
+
+async function runCheck(args) {
+  const spec = await loadRuntimeSpec();
+  const { json, positional, verbose } = parseFlags(args);
+  const source = positional[0];
+  if (!source) throw new Error("check requires a source path.");
+  const content = await fs.readFile(source, "utf8");
+  const program = toPlainData(spec.parser.parseProgram(content, spec.sourceModel, ParseError));
+  if (verbose) {
+    console.log(`Parsed ${program.segments.length} segments from ${source}`);
+    for (const seg of program.segments) {
+      console.log(`  [${seg.id}] ${seg.language} ${seg.kind}${seg.label ? ` (${seg.label})` : ""} line ${seg.lineStart}`);
+    }
+  }
+  const result = typecheck(program);
+  if (json) {
+    console.log(JSON.stringify(result, null, 2));
+  } else if (result.valid) {
+    console.log(`${source}: no errors (${result.labels.length} labels, ${result.refs.length} refs)`);
+  } else {
+    for (const err of result.errors) {
+      const loc = err.line ? `:${err.line}` : "";
+      console.error(`${source}${loc}: ${err.message}`);
+    }
+    process.exitCode = 1;
+  }
+}
+
+async function runFmt(args) {
+  const { positional, dryRun, verbose } = parseFlags(args);
+  const source = positional[0];
+  if (!source) throw new Error("fmt requires a source path.");
+  const content = await fs.readFile(source, "utf8");
+  const formatted = formatSource(content);
+  if (dryRun) {
+    if (content !== formatted) {
+      console.log(`${source}: would be reformatted`);
+    } else {
+      console.log(`${source}: already formatted`);
+    }
+    return;
+  }
+  if (content !== formatted) {
+    await fs.writeFile(source, formatted, "utf8");
+    if (verbose) console.log(`Formatted ${source}`);
+  } else if (verbose) {
+    console.log(`${source}: already formatted`);
+  }
+}
+
 export async function main(argv) {
   const [command, ...args] = argv;
 
@@ -366,6 +410,26 @@ export async function main(argv) {
 
   if (command === "bootstrap") {
     await runBootstrap(args);
+    return 0;
+  }
+
+  if (command === "watch") {
+    await runWatch(args);
+    return 0;
+  }
+
+  if (command === "repl") {
+    await runRepl();
+    return 0;
+  }
+
+  if (command === "check") {
+    await runCheck(args);
+    return 0;
+  }
+
+  if (command === "fmt") {
+    await runFmt(args);
     return 0;
   }
 

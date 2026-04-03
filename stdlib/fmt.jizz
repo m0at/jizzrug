@@ -1,0 +1,139 @@
+# Formatting contracts for jizzrug.
+# Cross-lane string formatting utilities.
+
+```javascript fmt_ops
+export function format(template, ...args) {
+  let i = 0;
+  return template.replace(/{}/g, () => (i < args.length ? String(args[i++]) : "{}"));
+}
+
+export function padLeft(str, len, ch = " ") {
+  return String(str).padStart(len, ch);
+}
+
+export function padRight(str, len, ch = " ") {
+  return String(str).padEnd(len, ch);
+}
+
+export function upper(str) {
+  return String(str).toUpperCase();
+}
+
+export function lower(str) {
+  return String(str).toLowerCase();
+}
+
+export function join(arr, sep = ", ") {
+  return arr.join(sep);
+}
+```
+
+```rust fmt_ops
+pub fn pad_left(s: &str, width: usize, ch: char) -> String {
+    if s.len() >= width {
+        return s.to_string();
+    }
+    let padding: String = std::iter::repeat(ch).take(width - s.len()).collect();
+    format!("{}{}", padding, s)
+}
+
+pub fn pad_right(s: &str, width: usize, ch: char) -> String {
+    if s.len() >= width {
+        return s.to_string();
+    }
+    let padding: String = std::iter::repeat(ch).take(width - s.len()).collect();
+    format!("{}{}", s, padding)
+}
+
+pub fn upper(s: &str) -> String {
+    s.to_uppercase()
+}
+
+pub fn lower(s: &str) -> String {
+    s.to_lowercase()
+}
+
+pub fn join(parts: &[&str], sep: &str) -> String {
+    parts.join(sep)
+}
+```
+
+```go fmt_ops
+package fmt
+
+import (
+	"strings"
+)
+
+func PadLeft(s string, width int, ch byte) string {
+	if len(s) >= width {
+		return s
+	}
+	return strings.Repeat(string(ch), width-len(s)) + s
+}
+
+func PadRight(s string, width int, ch byte) string {
+	if len(s) >= width {
+		return s
+	}
+	return s + strings.Repeat(string(ch), width-len(s))
+}
+
+func Upper(s string) string {
+	return strings.ToUpper(s)
+}
+
+func Lower(s string) string {
+	return strings.ToLower(s)
+}
+
+func Join(parts []string, sep string) string {
+	return strings.Join(parts, sep)
+}
+```
+
+```zig fmt_ops
+const std = @import("std");
+
+pub fn padLeft(allocator: std.mem.Allocator, s: []const u8, width: usize, ch: u8) ![]u8 {
+    if (s.len >= width) {
+        const out = try allocator.alloc(u8, s.len);
+        @memcpy(out, s);
+        return out;
+    }
+    const pad_len = width - s.len;
+    const out = try allocator.alloc(u8, width);
+    @memset(out[0..pad_len], ch);
+    @memcpy(out[pad_len..], s);
+    return out;
+}
+
+pub fn padRight(allocator: std.mem.Allocator, s: []const u8, width: usize, ch: u8) ![]u8 {
+    if (s.len >= width) {
+        const out = try allocator.alloc(u8, s.len);
+        @memcpy(out, s);
+        return out;
+    }
+    const pad_len = width - s.len;
+    const out = try allocator.alloc(u8, width);
+    @memcpy(out[0..s.len], s);
+    @memset(out[s.len..], ch);
+    return out;
+}
+
+pub fn upper(allocator: std.mem.Allocator, s: []const u8) ![]u8 {
+    const out = try allocator.alloc(u8, s.len);
+    for (s, 0..) |c, i| {
+        out[i] = std.ascii.toUpper(c);
+    }
+    return out;
+}
+
+pub fn lower(allocator: std.mem.Allocator, s: []const u8) ![]u8 {
+    const out = try allocator.alloc(u8, s.len);
+    for (s, 0..) |c, i| {
+        out[i] = std.ascii.toLower(c);
+    }
+    return out;
+}
+```

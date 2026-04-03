@@ -1,0 +1,85 @@
+# Math contracts for jizzrug.
+# Cross-lane math operations.
+
+```javascript math_ops
+export const PI = Math.PI;
+export const E = Math.E;
+
+export function abs(x) { return Math.abs(x); }
+export function floor(x) { return Math.floor(x); }
+export function ceil(x) { return Math.ceil(x); }
+export function round(x) { return Math.round(x); }
+export function sqrt(x) { return Math.sqrt(x); }
+export function pow(base, exp) { return Math.pow(base, exp); }
+export function min(...args) { return Math.min(...args); }
+export function max(...args) { return Math.max(...args); }
+export function clamp(x, lo, hi) { return Math.min(Math.max(x, lo), hi); }
+export function lerp(a, b, t) { return a + (b - a) * t; }
+```
+
+```rust math_ops
+pub const PI: f64 = std::f64::consts::PI;
+pub const E: f64 = std::f64::consts::E;
+
+pub fn abs(x: f64) -> f64 { x.abs() }
+pub fn floor(x: f64) -> f64 { x.floor() }
+pub fn ceil(x: f64) -> f64 { x.ceil() }
+pub fn round(x: f64) -> f64 { x.round() }
+pub fn sqrt(x: f64) -> f64 { x.sqrt() }
+pub fn pow(base: f64, exp: f64) -> f64 { base.powf(exp) }
+pub fn min(a: f64, b: f64) -> f64 { a.min(b) }
+pub fn max(a: f64, b: f64) -> f64 { a.max(b) }
+pub fn clamp(x: f64, lo: f64, hi: f64) -> f64 { x.clamp(lo, hi) }
+pub fn lerp(a: f64, b: f64, t: f64) -> f64 { a + (b - a) * t }
+```
+
+```go math_ops
+package math
+
+import "math"
+
+const PI = math.Pi
+const E = math.E
+
+func Abs(x float64) float64   { return math.Abs(x) }
+func Floor(x float64) float64 { return math.Floor(x) }
+func Ceil(x float64) float64  { return math.Ceil(x) }
+func Round(x float64) float64 { return math.Round(x) }
+func Sqrt(x float64) float64  { return math.Sqrt(x) }
+func Pow(base, exp float64) float64 { return math.Pow(base, exp) }
+func Min(a, b float64) float64 { return math.Min(a, b) }
+func Max(a, b float64) float64 { return math.Max(a, b) }
+
+func Clamp(x, lo, hi float64) float64 {
+    return math.Max(lo, math.Min(x, hi))
+}
+
+func Lerp(a, b, t float64) float64 {
+    return a + (b-a)*t
+}
+```
+
+```zig math_ops
+const std = @import("std");
+const math = std.math;
+
+pub const PI: f64 = math.pi;
+pub const E: f64 = math.e;
+
+pub fn abs(x: f64) f64 { return @abs(x); }
+pub fn floor(x: f64) f64 { return @floor(x); }
+pub fn ceil(x: f64) f64 { return @ceil(x); }
+pub fn round(x: f64) f64 { return @round(x); }
+pub fn sqrt(x: f64) f64 { return @sqrt(x); }
+pub fn pow(base: f64, exp: f64) f64 { return std.math.pow(f64, base, exp); }
+pub fn min(a: f64, b: f64) f64 { return @min(a, b); }
+pub fn max(a: f64, b: f64) f64 { return @max(a, b); }
+
+pub fn clamp(x: f64, lo: f64, hi: f64) f64 {
+    return @max(lo, @min(x, hi));
+}
+
+pub fn lerp(a: f64, b: f64, t: f64) f64 {
+    return a + (b - a) * t;
+}
+```

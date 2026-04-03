@@ -5,7 +5,11 @@ js: export const COMMAND_EXPANSION = "Computer Unified Memory dispatcher";
 js: export const DEFAULT_OUTPUT_DIR = "dist/jizzrug";
 js: export const COMMANDS = {
 js:   cum: { summary: "Run the Computer Unified Memory dispatcher", defaultOutDir: "dist/jizzrug", requiresSource: true },
-js:   bootstrap: { summary: "Compile the repo .jizz source tree", defaultOutDir: "out/bootstrap", requiresSource: false }
+js:   bootstrap: { summary: "Compile the repo .jizz source tree", defaultOutDir: "out/bootstrap", requiresSource: false },
+js:   watch: { summary: "Watch sources and recompile on change", defaultOutDir: "dist/jizzrug", requiresSource: false },
+js:   repl: { summary: "Interactive jizzrug REPL", defaultOutDir: null, requiresSource: false },
+js:   check: { summary: "Parse and validate without emitting", defaultOutDir: null, requiresSource: true },
+js:   fmt: { summary: "Format jizzrug source files", defaultOutDir: null, requiresSource: true }
 js: };
 
 ```javascript synopsis
@@ -20,7 +24,15 @@ export function helpText() {
         "commands:",
         "  cum <source> [--out DIR] [--json]     Run the Computer Unified Memory dispatcher",
         "  bootstrap [--out DIR] [--json]        Compile the repo .jizz source tree",
+        "  watch [--out DIR]                     Watch sources and recompile on change",
+        "  repl                                  Interactive jizzrug REPL",
+        "  check <source>                        Parse and validate without emitting",
+        "  fmt <source>                          Format jizzrug source files",
         "  help                                  Show this help text",
+        "",
+        "flags:",
+        "  --verbose                             Detailed compilation output",
+        "  --dry-run                             Parse and validate but do not write",
     ].join("\n");
 }
 ```

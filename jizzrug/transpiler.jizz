@@ -76,3 +76,60 @@ pub const EmissionPolicy = struct {
     preserve_segment_order: bool = true,
 };
 ```
+
+# Optimization and code generation policies.
+
+```javascript optimization_policy
+export const optimizationPolicy = {
+    deadSegmentElimination: true,
+    laneConsolidation: true,
+    emptySegmentRemoval: true,
+    commentStripping: false,
+};
+
+export const codegenPolicy = {
+    emitFFIStubs: false,
+    emitMakefile: false,
+    emitInteropTypes: false,
+};
+```
+
+```rust optimization_flags
+pub struct OptimizationFlags {
+    pub dead_segment_elimination: bool,
+    pub lane_consolidation: bool,
+    pub empty_segment_removal: bool,
+    pub comment_stripping: bool,
+}
+
+impl Default for OptimizationFlags {
+    fn default() -> Self {
+        Self {
+            dead_segment_elimination: true,
+            lane_consolidation: true,
+            empty_segment_removal: true,
+            comment_stripping: false,
+        }
+    }
+}
+```
+
+```go codegen_config
+package transpiler
+
+type CodegenConfig struct {
+    EmitFFIStubs    bool
+    EmitMakefile    bool
+    EmitInteropTypes bool
+}
+```
+
+```zig codegen_policy
+const std = @import("std");
+
+pub const CodegenPolicy = struct {
+    emit_ffi_stubs: bool = false,
+    emit_makefile: bool = false,
+    emit_interop_types: bool = false,
+};
+```

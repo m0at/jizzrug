@@ -1,0 +1,188 @@
+# Collection type contracts for jizzrug.
+# Cross-lane stack, queue, and map operations.
+
+```javascript collections_ops
+export function stack() {
+  const items = [];
+  return {
+    push(v) { items.push(v); },
+    pop() { return items.pop(); },
+    peek() { return items[items.length - 1]; },
+    size() { return items.length; },
+    isEmpty() { return items.length === 0; },
+    toArray() { return [...items]; },
+  };
+}
+
+export function queue() {
+  const items = [];
+  return {
+    enqueue(v) { items.push(v); },
+    dequeue() { return items.shift(); },
+    peek() { return items[0]; },
+    size() { return items.length; },
+    isEmpty() { return items.length === 0; },
+    toArray() { return [...items]; },
+  };
+}
+
+export function orderedMap() {
+  const keys = [];
+  const map = new Map();
+  return {
+    set(k, v) { if (!map.has(k)) keys.push(k); map.set(k, v); },
+    get(k) { return map.get(k); },
+    has(k) { return map.has(k); },
+    delete(k) { const i = keys.indexOf(k); if (i >= 0) keys.splice(i, 1); return map.delete(k); },
+    size() { return map.size; },
+    entries() { return keys.map(k => [k, map.get(k)]); },
+  };
+}
+```
+
+```rust collections_ops
+use std::collections::VecDeque;
+use std::collections::BTreeMap;
+
+pub struct Stack<T> {
+    items: Vec<T>,
+}
+
+impl<T> Stack<T> {
+    pub fn new() -> Self { Stack { items: Vec::new() } }
+    pub fn push(&mut self, val: T) { self.items.push(val); }
+    pub fn pop(&mut self) -> Option<T> { self.items.pop() }
+    pub fn peek(&self) -> Option<&T> { self.items.last() }
+    pub fn size(&self) -> usize { self.items.len() }
+    pub fn is_empty(&self) -> bool { self.items.is_empty() }
+}
+
+pub struct Queue<T> {
+    items: VecDeque<T>,
+}
+
+impl<T> Queue<T> {
+    pub fn new() -> Self { Queue { items: VecDeque::new() } }
+    pub fn enqueue(&mut self, val: T) { self.items.push_back(val); }
+    pub fn dequeue(&mut self) -> Option<T> { self.items.pop_front() }
+    pub fn peek(&self) -> Option<&T> { self.items.front() }
+    pub fn size(&self) -> usize { self.items.len() }
+    pub fn is_empty(&self) -> bool { self.items.is_empty() }
+}
+
+pub type OrderedMap<K, V> = BTreeMap<K, V>;
+```
+
+```go collections_ops
+package collections
+
+type Stack struct {
+    items []interface{}
+}
+
+func NewStack() *Stack { return &Stack{} }
+func (s *Stack) Push(v interface{}) { s.items = append(s.items, v) }
+func (s *Stack) Pop() interface{} {
+    if len(s.items) == 0 { return nil }
+    v := s.items[len(s.items)-1]
+    s.items = s.items[:len(s.items)-1]
+    return v
+}
+func (s *Stack) Peek() interface{} {
+    if len(s.items) == 0 { return nil }
+    return s.items[len(s.items)-1]
+}
+func (s *Stack) Size() int { return len(s.items) }
+func (s *Stack) IsEmpty() bool { return len(s.items) == 0 }
+
+type Queue struct {
+    items []interface{}
+}
+
+func NewQueue() *Queue { return &Queue{} }
+func (q *Queue) Enqueue(v interface{}) { q.items = append(q.items, v) }
+func (q *Queue) Dequeue() interface{} {
+    if len(q.items) == 0 { return nil }
+    v := q.items[0]
+    q.items = q.items[1:]
+    return v
+}
+func (q *Queue) Peek() interface{} {
+    if len(q.items) == 0 { return nil }
+    return q.items[0]
+}
+func (q *Queue) Size() int { return len(q.items) }
+func (q *Queue) IsEmpty() bool { return len(q.items) == 0 }
+```
+
+```zig collections_ops
+const std = @import("std");
+
+pub fn Stack(comptime T: type) type {
+    return struct {
+        items: std.ArrayList(T),
+
+        const Self = @This();
+
+        pub fn init(allocator: std.mem.Allocator) Self {
+            return .{ .items = std.ArrayList(T).init(allocator) };
+        }
+
+        pub fn deinit(self: *Self) void {
+            self.items.deinit();
+        }
+
+        pub fn push(self: *Self, val: T) !void {
+            try self.items.append(val);
+        }
+
+        pub fn pop(self: *Self) ?T {
+            return self.items.popOrNull();
+        }
+
+        pub fn size(self: *const Self) usize {
+            return self.items.items.len;
+        }
+
+        pub fn isEmpty(self: *const Self) bool {
+            return self.items.items.len == 0;
+        }
+    };
+}
+
+pub fn Queue(comptime T: type) type {
+    return struct {
+        items: std.ArrayList(T),
+        head: usize,
+
+        const Self = @This();
+
+        pub fn init(allocator: std.mem.Allocator) Self {
+            return .{ .items = std.ArrayList(T).init(allocator), .head = 0 };
+        }
+
+        pub fn deinit(self: *Self) void {
+            self.items.deinit();
+        }
+
+        pub fn enqueue(self: *Self, val: T) !void {
+            try self.items.append(val);
+        }
+
+        pub fn dequeue(self: *Self) ?T {
+            if (self.head >= self.items.items.len) return null;
+            const val = self.items.items[self.head];
+            self.head += 1;
+            return val;
+        }
+
+        pub fn size(self: *const Self) usize {
+            return self.items.items.len - self.head;
+        }
+
+        pub fn isEmpty(self: *const Self) bool {
+            return self.head >= self.items.items.len;
+        }
+    };
+}
+```

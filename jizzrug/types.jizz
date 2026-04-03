@@ -1,0 +1,57 @@
+# Type system and cross-lane validation contracts for jizzrug.
+# Defines type annotations that enforce contracts across all 4 lanes.
+
+js: export const TYPE_SYSTEM_STAGE = "typecheck";
+
+```javascript type_contracts
+export const VALID_LANES = ["javascript", "go", "rust", "zig"];
+
+export const TYPE_PRIMITIVES = [
+    "string", "int", "float", "bool", "void", "any",
+    "bytes", "error",
+];
+
+export const typeAnnotationPattern = /^@type\s+(\w+)\s*:\s*(.+)$/;
+
+export function parseTypeSignature(sig) {
+    const parts = sig.split("->").map(s => s.trim());
+    if (parts.length < 2) return { params: [], ret: parts[0] || "void" };
+    const ret = parts.pop();
+    return { params: parts, ret };
+}
+
+export const crossLaneContract = {
+    requiresMatchingLabels: true,
+    validateReferences: true,
+    detectDuplicateLabels: true,
+    detectUnreachable: false,
+};
+```
+
+```rust type_model
+pub struct TypeContract {
+    pub name: &'static str,
+    pub params: &'static [&'static str],
+    pub ret: &'static str,
+}
+```
+
+```go type_contract
+package types
+
+type TypeContract struct {
+    Name   string
+    Params []string
+    Ret    string
+}
+```
+
+```zig type_info
+const std = @import("std");
+
+pub const TypeInfo = struct {
+    name: []const u8,
+    param_count: usize,
+    ret_type: []const u8,
+};
+```
